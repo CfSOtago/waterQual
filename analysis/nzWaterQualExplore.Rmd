@@ -138,7 +138,9 @@ Overall there are:
 
  * `r uniqueN(wqdt$sID)` sites
 
-This is hardly trend or raw data - it is a single record per site with indicator of change via a trend slope coefficient or a single % change value. There ae also data quality & missing data issues (see Statistical Annex). It's noticeable for example that, irrespective of the indicatr, over half of stations were thought to have insufficient data to determine trend direction. This was true of 70% of stations for [ECOLI](https://www.stats.govt.nz/indicators/river-water-quality-escherichia-coli) and 78% for the Macroinvertebrate Community Index ([MCI](https://www.stats.govt.nz/indicators/river-water-quality-macroinvertebrate-community-index)).
+This isn't really trend or raw data - it is a single record per site with indicator of change via a trend slope coefficient or a single % change value. We were looking for the data used to create the time-series plots in (for example) https://www.lawa.org.nz/explore-data/otago-region/river-quality/manuherikia-river/manuherikia-at-ophir/
+
+There are also data quality & missing data issues (see Statistical Annex). It's noticeable for example that, irrespective of the indicator, over half of stations were thought to have insufficient data to determine trend direction. This was true of 70% of stations for [ECOLI](https://www.stats.govt.nz/indicators/river-water-quality-escherichia-coli) and 78% for the Macroinvertebrate Community Index ([MCI](https://www.stats.govt.nz/indicators/river-water-quality-macroinvertebrate-community-index)).
 
 ```{r summariseQuality}
 tq <- table(wqdt$TrendCategory, wqdt$npID)
@@ -171,7 +173,7 @@ Now try to plot individual trends. This is nasty...
 
 Ideally we want to sort by value within pollutant and 'fade out' the ones with insufficient data. Colour coding needs to be careful - for some such as MCI an increase is 'good'.
 
-```{r plotSites, fig.height = 10, fig.cap="Site level trend plots"}
+```{r plotSites, fig.height = 15, fig.cap="Site level trend plots"}
 p <- ggplot2::ggplot(wqdt, aes(y = sID,
                                x = Percent_annual_change, 
                                alpha = forcats::fct_rev(TrendCategory), # reverse so lightest alpha == least data
