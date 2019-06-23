@@ -38,6 +38,7 @@ knitr::opts_chunk$set(echo = FALSE,          # echo code so reader can see what 
 library(dkUtils)
 
 myLibs <- c("data.table",
+            "forcats",
             "ggplot2",
             "here",
             "kableExtra",
@@ -92,13 +93,13 @@ makeLinePlot <- function(dt,yvar,byvar){
 
 ## Contributions
 
-Please note that authorship is alphabetical. Contributions are listed below - see [github](https://github.com/CfSOtago/airQual/commits/master) for details and who to blame for what :-).
+Please note that authorship is alphabetical. Contributions are listed below - see [github](https://github.com/CfSOtago/waterQual/commits/master) for details and who to blame for what :-).
 
 Ben Anderson (b.anderson@soton.ac.uk `@dataknut`)
 
 ## Code
 
- * https://github.com/CfSOtago/airQual/commits/master
+ * Repo: https://github.com/CfSOtago/waterQual/
 
 ## Citation
 
@@ -221,6 +222,7 @@ Analysis completed in `r elapsed` seconds ( `r round(elapsed/60,2)` minutes).
 R packages used:
 
  * data.table - [@data.table]
+ * forcats - [@forcats]
  * ggplot2 - [@ggplot2]
  * here - [@here]
  * kableExtra - [@kableExtra]
