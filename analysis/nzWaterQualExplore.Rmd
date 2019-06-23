@@ -280,7 +280,7 @@ skimr::skim(mfeWqDT)
 
 ```{r trendNotes}
 
-tn <- mfemfeWqDT[!is.na(AnalysisNote) & AnalysisNote != "ok", .(sID, npID, AnalysisNote)]
+tn <- mfeWqDT[!is.na(AnalysisNote) & AnalysisNote != "ok", .(sID, npID, AnalysisNote)]
 
 kableExtra::kable(tn, caption = "Analysis notes")
 
