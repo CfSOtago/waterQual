@@ -1,0 +1,232 @@
+---
+params:
+  myTitle: 'Water Quality in New Zealand'
+  mySubTitle: 'Exploring "official" data'
+title: "`r params$myTitle`"
+subtitle: "`r params$mySubTitle`"
+author: "Ben Anderson (b.anderson@soton.ac.uk `@dataknut`)"
+date: 'Last run at: `r Sys.time()`'
+output:
+  bookdown::html_document2:
+    fig_caption: yes
+    number_sections: yes
+    toc: yes
+    collapsed: FALSE
+    toc_float: yes
+    highlight: tango
+    code_folding: hide
+bibliography: '`r path.expand("~/bibliography.bib")`' 
+---
+
+```{r knitrSetUp, include=FALSE}
+
+# Set knitr options
+knitr::opts_chunk$set(echo = FALSE,          # echo code so reader can see what is happening
+                      warning = FALSE,
+                      message = FALSE,
+                      fig_caption = TRUE,
+                      fig_height = 6,        # default, make it bigger to stretch vertical axis
+                      fig_width = 8,         # full width
+                      tidy = TRUE)           # tidy up code in case echo = TRUE
+
+```
+
+
+```{r codeSetup, include=FALSE}
+
+# Load Packages ----
+library(dkUtils)
+
+myLibs <- c("data.table",
+            "ggplot2",
+            "here",
+            "kableExtra",
+            "lubridate",
+            "plotly",
+            "skimr", 
+            "viridis")
+
+dkUtils::loadLibraries(myLibs)              # Load script specific packages
+
+# Project Settings ----
+projLoc <- here::here()
+
+dPath <- "~/Data/NZ_mfe/waterQuality/"
+dataFile <- "mfe-river-water-quality-trends-20082017-19982017-and-19902017-CSV/river-water-quality-trends-20082017-19982017-and-1990-2017-raw-data.csv"
+
+wqURL <- "https://data.mfe.govt.nz/data/category/fresh-water/"
+  
+
+# Adjust knitr options if required
+knitr::opts_chunk$set(echo = TRUE)
+
+# Log compile time:
+startTime <- proc.time()
+
+# Functions ----
+makeTilePlot <- function(dt,yvar,byvar){
+  p <- ggplot2::ggplot(dt, aes(x = ba_date, 
+                               y = get(byvar), 
+                               fill = get(yvar)
+                               )
+                       ) +
+    geom_tile() +
+    scale_fill_continuous(low = "green", high = "red") +
+    labs(x = "Date")
+  return(p)
+}
+
+makeLinePlot <- function(dt,yvar,byvar){
+  p <- ggplot2::ggplot(dt, aes(x = ba_date, 
+                               y = get(yvar),
+                               colour = get(byvar)
+                               )
+                       ) +
+    geom_line() +
+    labs(x = "Date")
+  return(p)
+}
+```
+
+# About
+
+## Contributions
+
+Please note that authorship is alphabetical. Contributions are listed below - see [github](https://github.com/CfSOtago/airQual/commits/master) for details and who to blame for what :-).
+
+Ben Anderson (b.anderson@soton.ac.uk `@dataknut`)
+
+## Code
+
+ * https://github.com/CfSOtago/airQual/commits/master
+
+## Citation
+
+If you wish to refer to any of the material from this report please cite as:
+
+ * Anderson, B., (`r format(Sys.time(), format = "%Y")`) `r params$myTitle`: `r params$mySubTitle` , University of Southampton: Southampton, UK.
+
+Report circulation:
+
+ * Public.
+ 
+Report purpose: 
+ 
+ * to explore `official` New Zealand Water Quality data
+
+This work has received funding from the European Union’s Horizon 2020 research and innovation programme under the [Marie Skłodowska-Curie](http://ec.europa.eu/research/mariecurieactions/index_en.htm) grant agreement No 700386 ([SPATIALEC](http://www.energy.soton.ac.uk/tag/spatialec/)).
+
+This work is (c) `r format(Sys.time(), format = "%Y")` the University of Southampton.
+ 
+# Introduction
+
+## 'Trend' data
+
+Data source: `r wqURL`
+
+Data file: `r dataFile`
+
+```{r loadTrend}
+
+df <- paste0(dPath, dataFile)
+
+wqdt <- data.table::fread(df)
+```
+
+Overall there are:
+
+ * `r uniqueN(wqdt$sID)` sites
+
+This is hardly trend or raw data - it is a single record per site with indicator of change via a trend slope coefficient or a single % change value. There ae also data quality & missing data issues (see Statistical Annex). It's noticeable for example that, irrespective of the indicatr, over half of stations were thought to have insufficient data to determine trend direction. This was true of 70% of stations for [ECOLI](https://www.stats.govt.nz/indicators/river-water-quality-escherichia-coli) and 78% for the Macroinvertebrate Community Index ([MCI](https://www.stats.govt.nz/indicators/river-water-quality-macroinvertebrate-community-index)).
+
+```{r summariseQuality}
+tq <- table(wqdt$TrendCategory, wqdt$npID)
+
+kableExtra::kable(addmargins(tq), caption = "Trend category counts") %>%
+  kable_styling()
+
+kableExtra::kable(100*prop.table(tq,2), digits = 2,
+                  caption = "Trend category %") %>%
+  kable_styling()
+```
+
+
+```{r aggTrends, fig.height = 8, fig.cap="Test data values by indicator"}
+plotDT <- wqdt[, .(meanAnnualSenSlope = mean(AnnualSenSlope, na.rm = TRUE)),
+               keyby = .(npID, TrendCategory)]
+ggplot2::ggplot(plotDT, aes(x=TrendCategory, y = meanAnnualSenSlope, 
+                            group = npID, fill = npID)) + 
+  geom_col(position = "dodge")
+
+plotDT <- wqdt[, .(meanPercent_annual_change = mean(Percent_annual_change, na.rm = TRUE)),
+               keyby = .(npID, TrendCategory)]
+ggplot2::ggplot(plotDT, aes(x=TrendCategory, y = meanPercent_annual_change, 
+                            group = npID, fill = npID)) + 
+  geom_col(position = "dodge")
+
+```
+
+Now try to plot individual trends. This is nasty...
+
+Ideally we want to sort by value within pollutant and 'fade out' the ones with insufficient data. Colour coding needs to be careful - for some such as MCI an increase is 'good'.
+
+```{r plotSites, fig.height = 10, fig.cap="Site level trend plots"}
+p <- ggplot2::ggplot(wqdt, aes(y = sID,
+                               x = Percent_annual_change, 
+                               alpha = forcats::fct_rev(TrendCategory), # reverse so lightest alpha == least data
+                               colour = forcats::fct_rev(TrendCategory)
+                               )
+                     ) +
+  geom_vline(xintercept = 0, colour = "red") +
+  geom_point() +
+  guides(alpha = guide_legend(title = "Trend and quality code")
+         ) +
+  guides(colour = guide_legend(title = "Trend and quality code")
+         ) +
+  scale_color_viridis(discrete = TRUE) +
+  theme(legend.position = "bottom") +
+  facet_grid(. ~ npID)
+
+p
+```
+
+# Statistical Annex
+
+## Trend 'raw' data
+
+```{r skimTrend}
+skimr::skim(wqdt)
+```
+
+```{r trendNotes}
+
+tn <- wqdt[!is.na(AnalysisNote) & AnalysisNote != "ok", .(sID, npID, AnalysisNote)]
+
+kableExtra::kable(tn, caption = "Analysis notes")
+
+```
+
+# Runtime
+
+Report generated using [knitr](https://cran.r-project.org/package=knitr) in [RStudio](http://www.rstudio.com) with `r R.version.string` running on `r R.version$platform` (`r Sys.info()[3]`).
+
+```{r check runtime}
+t <- proc.time() - startTime
+
+elapsed <- t[[3]]
+```
+
+Analysis completed in `r elapsed` seconds ( `r round(elapsed/60,2)` minutes).
+
+R packages used:
+
+ * data.table - [@data.table]
+ * ggplot2 - [@ggplot2]
+ * here - [@here]
+ * kableExtra - [@kableExtra]
+ * lubridate - [@lubridate]
+ * skimr - [@skimr]
+ * viridis - [@viridis]
+            
+# References
+
