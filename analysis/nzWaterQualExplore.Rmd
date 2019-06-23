@@ -121,7 +121,7 @@ This work is (c) `r format(Sys.time(), format = "%Y")` the University of Southam
  
 # Introduction
 
-## 'Trend' data
+# MfE data
 
 Data source: `r wqURL`
 
@@ -131,19 +131,19 @@ Data file: `r dataFile`
 
 df <- paste0(dPath, dataFile)
 
-wqdt <- data.table::fread(df)
+mfeWqDT <- data.table::fread(df)
 ```
 
 Overall there are:
 
- * `r uniqueN(wqdt$sID)` sites
+ * `r uniqueN(mfeWqDT$sID)` sites
 
 This isn't really trend or raw data - it is a single record per site with indicator of change via a trend slope coefficient or a single % change value. We were looking for the data used to create the time-series plots in (for example) https://www.lawa.org.nz/explore-data/otago-region/river-quality/manuherikia-river/manuherikia-at-ophir/
 
 There are also data quality & missing data issues (see Statistical Annex). It's noticeable for example that, irrespective of the indicator, over half of stations were thought to have insufficient data to determine trend direction. This was true of 70% of stations for [ECOLI](https://www.stats.govt.nz/indicators/river-water-quality-escherichia-coli) and 78% for the Macroinvertebrate Community Index ([MCI](https://www.stats.govt.nz/indicators/river-water-quality-macroinvertebrate-community-index)).
 
 ```{r summariseQuality}
-tq <- table(wqdt$TrendCategory, wqdt$npID)
+tq <- table(mfeWqDT$TrendCategory, mfeWqDT$npID)
 
 kableExtra::kable(addmargins(tq), caption = "Trend category counts") %>%
   kable_styling()
@@ -155,13 +155,13 @@ kableExtra::kable(100*prop.table(tq,2), digits = 2,
 
 
 ```{r aggTrends, fig.height = 8, fig.cap="Test data values by indicator"}
-plotDT <- wqdt[, .(meanAnnualSenSlope = mean(AnnualSenSlope, na.rm = TRUE)),
+plotDT <- mfeWqDT[, .(meanAnnualSenSlope = mean(AnnualSenSlope, na.rm = TRUE)),
                keyby = .(npID, TrendCategory)]
 ggplot2::ggplot(plotDT, aes(x=TrendCategory, y = meanAnnualSenSlope, 
                             group = npID, fill = npID)) + 
   geom_col(position = "dodge")
 
-plotDT <- wqdt[, .(meanPercent_annual_change = mean(Percent_annual_change, na.rm = TRUE)),
+plotDT <- mfeWqDT[, .(meanPercent_annual_change = mean(Percent_annual_change, na.rm = TRUE)),
                keyby = .(npID, TrendCategory)]
 ggplot2::ggplot(plotDT, aes(x=TrendCategory, y = meanPercent_annual_change, 
                             group = npID, fill = npID)) + 
@@ -174,7 +174,7 @@ Now try to plot individual trends. This is nasty...
 Ideally we want to sort by value within pollutant and 'fade out' the ones with insufficient data. Colour coding needs to be careful - for some such as MCI an increase is 'good'.
 
 ```{r plotSites, fig.height = 15, fig.cap="Site level trend plots"}
-p <- ggplot2::ggplot(wqdt, aes(y = sID,
+p <- ggplot2::ggplot(mfeWqDT, aes(y = sID,
                                x = Percent_annual_change, 
                                alpha = forcats::fct_rev(TrendCategory), # reverse so lightest alpha == least data
                                colour = forcats::fct_rev(TrendCategory)
@@ -193,21 +193,106 @@ p <- ggplot2::ggplot(wqdt, aes(y = sID,
 p
 ```
 
+# LAWA data
+
+So this is the trend data we were after...
+
+ * https://www.lawa.org.nz/download-data/
+ 
+Also downloadable from:
+
+ * https://statisticsnz.shinyapps.io/river_water_quality_phosphorus/ (for example)
+ 
+```{r setLawa}
+
+f <- "LAWA Rivers_DownloadWQRawData_Oct2018.csv"
+p <- "~/Data/NZ_LAWA/waterQuality/"
+
+df <- paste0(p, f)
+
+LAWA_DT <- data.table::fread(df)
+```
+
+Using:
+
+ * `r f`
+
+```{r checkLawa, fig.height = 10}
+
+names(LAWA_DT)
+LAWA_DT$Ownership <- NULL # not used
+LAWA_DT$License <- NULL # not used
+LAWA_DT$Disclaimer <- NULL # not used
+
+LAWA_DT[, RawValue := as.numeric(RawValue)]
+LAWA_DT[, region.site := paste0(Region, ".", Site)]
+
+LAWA_DT[, ba_date := lubridate::dmy(Date)]
+
+h <- head(LAWA_DT)
+
+kableExtra::kable(h, caption = "First 6 rows of LAWA data") %>%
+  kable_styling()
+
+p <- makeTilePlot(LAWA_DT[parameter == "ECOLI"], yvar = "Value", byvar = "Site")
+p + labs(y = "ECOLI", caption = "Observations for E.Coli") + 
+  theme(legend.position = "bottom") +
+  guides(fill=guide_legend(title="E.Coli"))
+
+p <- makeTilePlot(LAWA_DT[parameter == "NH4"], yvar = "Value", byvar = "Site")
+p + labs(y = "NH4", caption = "Observations for NH4") + 
+  theme(legend.position = "bottom") +
+  guides(fill=guide_legend(title="NH4"))
+```
+
+
+```{r lawaSummary}
+
+st <- summary(LAWA_DT)
+
+kableExtra::kable(st, caption = "Summary of LAWA data") %>%
+  kable_styling()
+
+```
+
+```{r testDataPlotly, fig.height = 10, fig.cap="Test E.Coli data values by date and site"}
+# looks like daily data with gaps
+p <- makeLinePlot(LAWA_DT[parameter == "ECOLI"],
+                  yvar = "Value",
+                  byvar = "Site" )
+
+p <- p + labs(y = "E. coli", caption = "E. coli") +
+  guides(colour=guide_legend(title="E. coli")) +
+  theme(legend.position = "none") +
+  facet_grid(Region ~ .)
+
+p
+
+```
+
 # Statistical Annex
 
-## Trend 'raw' data
+## MfE 'raw' data
 
-```{r skimTrend}
-skimr::skim(wqdt)
+```{r skimMfE}
+skimr::skim(mfeWqDT)
 ```
 
 ```{r trendNotes}
 
-tn <- wqdt[!is.na(AnalysisNote) & AnalysisNote != "ok", .(sID, npID, AnalysisNote)]
+tn <- mfemfeWqDT[!is.na(AnalysisNote) & AnalysisNote != "ok", .(sID, npID, AnalysisNote)]
 
 kableExtra::kable(tn, caption = "Analysis notes")
 
 ```
+
+
+## LAWA 'raw' data
+
+```{r skimLAWA}
+skimr::skim(LAWA_DT)
+```
+
 
 # Runtime
 
