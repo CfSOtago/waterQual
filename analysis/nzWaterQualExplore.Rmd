@@ -217,6 +217,11 @@ Using:
 
  * `r f`
 
+Overall there are:
+
+ * `r uniqueN(LAWA_DT$Site)` sites spread across
+ * `r uniqueN(LAWA_DT$Region)` regions
+ 
 ```{r checkLawa, fig.height = 10}
 
 names(LAWA_DT)
