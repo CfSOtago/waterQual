@@ -87,6 +87,17 @@ makeLinePlot <- function(dt,yvar,byvar){
     labs(x = "Date")
   return(p)
 }
+
+makePointPlot <- function(dt,yvar,byvar){
+  p <- ggplot2::ggplot(dt, aes(x = ba_date, 
+                               y = get(yvar),
+                               colour = get(byvar)
+                               )
+                       ) +
+    geom_point() +
+    labs(x = "Date")
+  return(p)
+}
 ```
 
 # About
@@ -264,7 +275,7 @@ Figure \@ref(fig:testNH4Data) shows the distributon of NH4 over time for each si
 
 ```{r testNH4Data, fig.height = 10, fig.cap="Test NH4 data values by date and site"}
 # looks like daily data with gaps
-p <- makeLinePlot(LAWA_DT[parameter == "NH4"],
+p <- makePointPlot(LAWA_DT[parameter == "NH4"],
                   yvar = "Value",
                   byvar = "Site" )
 
