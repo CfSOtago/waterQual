@@ -260,15 +260,18 @@ kableExtra::kable(st, caption = "Summary of LAWA data") %>%
 
 ```
 
-```{r testDataPlotly, fig.height = 10, fig.cap="Test E.Coli data values by date and site"}
+Figure \@ref(fig:testNH4Data) shows the distributon of NH4 over time for each site split by region.
+
+```{r testNH4Data, fig.height = 10, fig.cap="Test NH4 data values by date and site"}
 # looks like daily data with gaps
-p <- makeLinePlot(LAWA_DT[parameter == "ECOLI"],
+p <- makeLinePlot(LAWA_DT[parameter == "NH4"],
                   yvar = "Value",
                   byvar = "Site" )
 
-p <- p + labs(y = "E. coli", caption = "E. coli") +
-  guides(colour=guide_legend(title="E. coli")) +
+p <- p + labs(y = "NH4", caption = "NH4") +
+  guides(colour=guide_legend(title="NH4")) +
   theme(legend.position = "none") +
+  theme(strip.text.y = element_text(angle = 0)) +
   facet_grid(Region ~ .)
 
 p
